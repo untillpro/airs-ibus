@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// PostRequest sends a message to a given queue
+// PostRequest s.e.
 var PostRequest func(ctx context.Context, request *Request, callbackData interface{}, timeout time.Duration)
 
 // ResponseHandler s.e.
