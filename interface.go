@@ -10,6 +10,7 @@ import (
 )
 
 // PostRequest s.e.
+// Implementation should call ResponseHandler when Response arrives or timeout happens
 var PostRequest func(ctx context.Context, request *Request, callbackData interface{}, timeout time.Duration)
 
 // ResponseHandler s.e.
