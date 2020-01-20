@@ -9,17 +9,17 @@ import (
 	"time"
 )
 
-// PostRequest s.e.
-// Implementation should call ResponseHandler when Response arrives or timeout happens
-var PostRequest func(ctx context.Context, request *Request, callbackData interface{}, timeout time.Duration)
+// SendRequest used by router. sends a message to a given queue
+// chunks must be readed to the end
+var SendRequest func(ctx context.Context, request *Request, callbackData interface{}, timeout time.Duration) (res Response, chunks <-chan []byte)
 
-// ResponseHandler s.e.
-// nil response means timeout
-var ResponseHandler func(ctx context.Context, response *Response, callbackData interface{})
-
-// RequestHandler s.e.
+// RequestHandler used by app
 var RequestHandler func(ctx context.Context, sender interface{}, request *Request)
 
-// PostResponse s.e.
-// response or chunk may be
-var PostResponse func(ctx context.Context, sender interface{}, response *Response, chunk []byte)
+// PostResponse used by app
+// Only first answer must have not nil Response
+// Empty chunk means end-of-data
+// First answer with chunk means next chunks follow
+// chunks must be readed by implementation to the end
+// chunks must be closed by sender
+var PostResponse func(ctx context.Context, sender interface{}, response Response, chunks <-chan []byte)
