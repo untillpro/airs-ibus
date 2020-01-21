@@ -37,8 +37,7 @@ type Request struct {
 
 // Response s.e.
 type Response struct {
-	ContenType string
-	Status     string
-	StatusCode int
-	Data       []byte
+	ContentType string
+	StatusCode  int
+	Data        []byte
 }
