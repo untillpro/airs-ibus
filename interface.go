@@ -15,7 +15,7 @@ import (
 // Non-nil chunksError when chunks are closed means an error in chunks
 // `err` and `error` can be a wrapped ErrTimeoutExpired (Checked as errors.Is(err, ErrTimeoutExpired))
 var SendRequest func(ctx context.Context,
-	request *Request, timeout time.Duration) (res *Response, err error, chunks <-chan []byte, chunksError *error)
+	request *Request, timeout time.Duration) (res *Response, chunks <-chan []byte, chunksError *error, err error)
 
 // RequestHandler used by app
 var RequestHandler func(ctx context.Context, sender interface{}, request Request)
