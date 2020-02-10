@@ -11,7 +11,7 @@ import (
 
 // SendRequest used by router and app, sends a message to a given queue
 // If err is not nil res and chunks are nil
-// If err is nil and chunks is not nil chunks must be read to the end
+// If chunks is not nil chunks must be read to the end
 // Non-nil chunksError when chunks are closed means an error in chunks
 // `err` and `error` can be a wrapped ErrTimeoutExpired (Checked as errors.Is(err, ErrTimeoutExpired))
 var SendRequest func(ctx context.Context,
