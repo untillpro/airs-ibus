@@ -41,3 +41,44 @@ type Response struct {
 	StatusCode  int
 	Data        []byte
 }
+
+// BusPacketType s.e.
+type BusPacketType int
+
+// SectionKind int
+type SectionKind int
+
+const (
+	// BusPacketSectionMap s.e.
+	BusPacketSectionMap BusPacketType = iota
+	// BusPacketElement s.e.
+	BusPacketElement
+	// BusPacketSectionArray s.e.
+	BusPacketSectionArray
+	// BusPacketSectionObject s.e.
+	BusPacketSectionObject
+)
+
+const (
+	// SectionKindUnspecified s.e.
+	SectionKindUnspecified SectionKind = iota
+	// SectionKindMap s.e.
+	SectionKindMap
+	// SectionKindArray s.e.
+	SectionKindArray
+	// SectionKindObject s.e.
+	SectionKindObject
+)
+
+// Section s.e.
+type Section struct {
+	SectionType string
+	Path        []string
+	SectionKind SectionKind
+}
+
+// Element s.e.
+type Element struct {
+	Name  string
+	Value []byte
+}
