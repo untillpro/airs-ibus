@@ -6,6 +6,7 @@ import (
 )
 
 // CreateResponse creates *Response with given status code and string data
+// TODO Why pointer is used here?
 func CreateResponse(code int, message string) *Response {
 	return &Response{
 		StatusCode: code,
@@ -14,6 +15,7 @@ func CreateResponse(code int, message string) *Response {
 }
 
 // CreateErrorResponse creates *Response with given status code, error message and ContentType "plain/text"
+// TODO Why pointer is used here?
 func CreateErrorResponse(code int, err error) *Response {
 	return &Response{
 		StatusCode:  code,
@@ -48,6 +50,13 @@ func readSection(ch <-chan []byte, kind SectionKind) *Section {
 		Path:        path,
 		SectionKind: kind,
 	}
+}
+
+// BytesToSections s.e.
+// IStatusSection will be returned last
+// If *chunksErr is not nil new IStatusSection will replace one from ch
+func BytesToSections(ch <-chan []byte, chunksErr *error) (sections <-chan ISection) {
+	return nil
 }
 
 // DecodedChan converts chan of []bytes to chan of interface{}

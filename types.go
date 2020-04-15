@@ -82,3 +82,39 @@ type Element struct {
 	Name  string
 	Value []byte
 }
+
+// ISection s.e.
+type ISection interface {
+}
+
+// IDataSection s.e.
+type IDataSection interface {
+	ISection
+	ElementType() []string
+	Path() []string
+}
+
+// IObjectSection s.e.
+type IObjectSection interface {
+	ISection
+	Value() []byte
+}
+
+// IArraySection s.e.
+type IArraySection interface {
+	ISection
+	Next() (value []byte, ok bool)
+}
+
+// IMapSection s.e.
+type IMapSection interface {
+	ISection
+	Next() (name string, value []byte, ok bool)
+}
+
+// IStatusSection s.e.
+type IStatusSection interface {
+	ISection
+	Status() int32
+	Value() []byte
+}
