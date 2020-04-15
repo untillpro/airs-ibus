@@ -70,19 +70,6 @@ const (
 	SectionKindObject
 )
 
-// Section s.e.
-type Section struct {
-	SectionType string
-	Path        []string
-	SectionKind SectionKind
-}
-
-// Element s.e.
-type Element struct {
-	Name  string
-	Value []byte
-}
-
 // ISection s.e.
 type ISection interface {
 	Type() string
@@ -91,7 +78,7 @@ type ISection interface {
 // IDataSection s.e.
 type IDataSection interface {
 	ISection
-	Path() string
+	Path() []string
 }
 
 // IObjectSection s.e.

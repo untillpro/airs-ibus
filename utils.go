@@ -24,7 +24,7 @@ func CreateErrorResponse(code int, err error) *Response {
 	}
 }
 
-func readSection(ch <-chan []byte, kind SectionKind) *Section {
+func readSection(ch <-chan []byte, kind SectionKind) *sectionData {
 	sectionTypeBytes := []byte{}
 	if kind != SectionKindObject {
 		ok := false
@@ -45,74 +45,99 @@ func readSection(ch <-chan []byte, kind SectionKind) *Section {
 			break
 		}
 	}
-	return &Section{
-		SectionType: string(sectionTypeBytes),
-		Path:        path,
-		SectionKind: kind,
+	return &sectionData{
+		sectionType: string(sectionTypeBytes),
+		path:        path,
+		sectionKind: kind,
+	}
+}
+
+type sectionData struct {
+	sectionType string
+	path        []string
+	sectionKind SectionKind
+	elems       []*element
+	currentElem int
+}
+
+func (s *sectionData) Type() string {
+	return s.sectionType
+}
+
+func (s *sectionData) Path() string {
+	return s.path[0]
+}
+
+type sectionDataArray struct {
+	*sectionData
+}
+
+func (s *sectionDataArray) Next() (value []byte, ok bool) {
+	if len(s.elems) <= s.currentElem {
+		return nil, false
+	}
+	s.currentElem++
+	return s.elems[s.currentElem].Value, true
+}
+
+func (s *sectionData) Next() (name string, value []byte, ok bool) {
+	if len(s.elems) <= s.currentElem {
+		return "", nil, false
+	}
+	s.currentElem++
+	return s.elems[s.currentElem].Name, s.elems[s.currentElem].Value, true
+}
+
+func (s *sectionData) Value() []byte {
+	return s.elems[0].Value
+}
+
+// element s.e.
+type element struct {
+	Name  string
+	Value []byte
+}
+
+func sendSection(s *sectionData, sections chan ISection) {
+	if s == nil {
+		return
+	}
+	switch s.sectionKind {
+	case SectionKindArray:
+		sections <- IArraySection(&sectionDataArray{s})
+	case SectionKindMap:
+		sections <- IMapSection(s)
+	case SectionKindObject:
+		sections <- IObjectSection(s)
 	}
 }
 
 // BytesToSections s.e.
-func BytesToSections(ch <-chan []byte, chunksErr *error) (sections <-chan ISection) {
-	return nil
-}
-
-// DecodedChan converts chan of []bytes to chan of interface{}
-// interface{} could be one of following: []byte, &ibus.Section, &ibus.Element
-func DecodedChan(ch <-chan []byte, chunksErr *error) (res chan interface{}, chunksErrRes *error) {
-	chunksErrRes = chunksErr
-	res = make(chan interface{})
+func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection) {
+	sections = make(chan ISection)
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
 				stackTrace := string(debug.Stack())
 				err := fmt.Errorf("panic on channel []byte -> interface{}\n%s", stackTrace)
-				*chunksErrRes = err
+				*chunksErr = err
 				for range ch {
 				}
 			}
-			close(res)
+			close(sections)
 		}()
-		var currentSection *Section
+		var currentSection *sectionData
 		for chunk := range ch {
-			if len(chunk) > 1 {
-				res <- chunk
-				continue
-			}
 			switch BusPacketType(chunk[0]) {
-			case BusPacketSectionArray:
-				currentSection = readSection(ch, SectionKindArray)
-				if currentSection != nil {
-					res <- currentSection
-				} else {
-					return
-				}
 			case BusPacketSectionMap:
+				sendSection(currentSection, sections)
 				currentSection = readSection(ch, SectionKindMap)
-				if currentSection != nil {
-					res <- currentSection
-				} else {
+				if currentSection == nil {
 					return
 				}
-			case BusPacketSectionObject:
-				currentSection = readSection(ch, SectionKindObject)
-				if currentSection != nil {
-					res <- currentSection
-				} else {
-					return
-				}
-				valueBytes, ok := <-ch
-				if !ok {
-					return
-				}
-				el := &Element{
-					Name:  "",
-					Value: valueBytes,
-				}
-				res <- el
 			case BusPacketElement:
 				nameBytes := []byte{}
-				if currentSection.SectionKind != SectionKindArray {
+				if currentSection.sectionKind != SectionKindArray {
 					ok := false
 					nameBytes, ok = <-ch
 					if !ok {
@@ -123,14 +148,34 @@ func DecodedChan(ch <-chan []byte, chunksErr *error) (res chan interface{}, chun
 				if !ok {
 					return
 				}
-				el := &Element{
-					Name:  string(nameBytes),
-					Value: valueBytes,
+				currentSection.elems = append(currentSection.elems, &element{Name: string(nameBytes), Value: valueBytes})
+			case BusPacketSectionArray:
+				sendSection(currentSection, sections)
+				currentSection = readSection(ch, SectionKindArray)
+				if currentSection == nil {
+					return
 				}
-				res <- el
+			case BusPacketSectionObject:
+				sendSection(currentSection, sections)
+				currentSection = nil
+				objectSection := readSection(ch, SectionKindObject)
+				if objectSection == nil {
+					return
+				}
+				valueBytes, ok := <-ch
+				if !ok {
+					return
+				}
+				// will send immediately to not to wait for next packet
+				// other section should be sent on next section arrive because we do not know amount of elements
+				objectSection.elems = append(objectSection.elems, &element{Value: valueBytes})
+				sections <- objectSection
 			default:
 				panic("unknown bus packet type: " + string(chunk[0]))
 			}
+		}
+		if currentSection != nil {
+			sections <- IMapSection(currentSection)
 		}
 	}()
 	return
