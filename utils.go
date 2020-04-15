@@ -54,7 +54,7 @@ func readSection(ch <-chan []byte, kind SectionKind) *Section {
 
 // BytesToSections s.e.
 // IStatusSection will be returned last
-// If *chunksErr is not nil new IStatusSection will replace one from ch
+// If *chunksErr is not nil (when `ch` ends) new IStatusSection will replace one from ch
 func BytesToSections(ch <-chan []byte, chunksErr *error) (sections <-chan ISection) {
 	return nil
 }
