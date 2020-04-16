@@ -61,7 +61,7 @@ type sectionData struct {
 	currentElem int
 }
 
-// ToJSON s.e.
+// ToJSON encodes the section to JSON and writes it to `buf` 
 func (s *sectionData) ToJSON(buf *bytes.Buffer) {
 	buf.WriteString("{")
 	if len(s.Type()) > 0 {
@@ -130,7 +130,6 @@ func (s *sectionData) Value() []byte {
 	return s.elems[0].Value
 }
 
-// element s.e.
 type element struct {
 	Name  string
 	Value []byte
@@ -150,7 +149,7 @@ func sendSection(s *sectionData, sections chan ISection) {
 	}
 }
 
-// BytesToSections s.e.
+// BytesToSections converts chan []byte to chan ISection
 func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection) {
 	sections = make(chan ISection)
 	go func() {
