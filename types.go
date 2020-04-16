@@ -4,6 +4,8 @@
 
 package ibus
 
+import "bytes"
+
 // HTTPMethod s.e.
 // see const.go/HTTPMethodGET...
 type HTTPMethod int
@@ -73,6 +75,7 @@ const (
 // ISection s.e.
 type ISection interface {
 	Type() string
+	ToJSON(buf *bytes.Buffer)
 }
 
 // IDataSection s.e.

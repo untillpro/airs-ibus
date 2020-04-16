@@ -1,6 +1,7 @@
 package ibus
 
 import (
+	"bytes"
 	"fmt"
 	"runtime/debug"
 )
@@ -60,12 +61,49 @@ type sectionData struct {
 	currentElem int
 }
 
+// ToJSON s.e.
+func (s *sectionData) ToJSON(buf *bytes.Buffer) {
+	buf.WriteString("{")
+	if len(s.Type()) > 0 {
+		buf.WriteString(fmt.Sprintf(`"type":"%s",`, s.Type()))
+	}
+	if len(s.Path()) > 0 {
+		buf.WriteString(`"path":[`)
+		for _, path := range s.Path() {
+			buf.WriteString(fmt.Sprintf(`"%s",`, path))
+		}
+		buf.Truncate(buf.Len() - 1)
+		buf.WriteString("],")
+	}
+	if len(s.elems) > 0 {
+		buf.WriteString(`"elements":`)
+		finalizer := ""
+		if s.sectionKind == SectionKindArray {
+			buf.WriteString("[")
+			finalizer = "]"
+		} else if s.sectionKind != SectionKindObject {
+			buf.WriteString("{")
+			finalizer = "}"
+		}
+		for _, elem := range s.elems {
+			if len(elem.Name) > 0 {
+				buf.WriteString(fmt.Sprintf(`"%s":`, elem.Name))
+			}
+			buf.Write(elem.Value)
+			buf.WriteString(",")
+		}
+		buf.Truncate(buf.Len() - 1)
+		buf.WriteString(finalizer)
+	}
+	buf.WriteString("}")
+}
+
 func (s *sectionData) Type() string {
 	return s.sectionType
 }
 
-func (s *sectionData) Path() string {
-	return s.path[0]
+func (s *sectionData) Path() []string {
+	return s.path
 }
 
 type sectionDataArray struct {
