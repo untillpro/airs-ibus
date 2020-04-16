@@ -195,7 +195,6 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 				}
 			case BusPacketSectionObject:
 				sendSection(currentSection, sections)
-				currentSection = nil
 				objectSection := readSection(ch, SectionKindObject)
 				if objectSection == nil {
 					return
@@ -205,7 +204,6 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 					return
 				}
 				// will send immediately to not to wait for next packet
-				// other section should be sent on next section arrive because we do not know amount of elements
 				objectSection.elems = append(objectSection.elems, &element{Value: valueBytes})
 				sections <- objectSection
 			default:
