@@ -91,7 +91,7 @@ type ISection interface {
 // IDataSection s.e.
 type IDataSection interface {
 	ISection
-	Path() string
+	Path() []string
 }
 
 // IObjectSection s.e.
