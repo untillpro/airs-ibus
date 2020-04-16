@@ -174,9 +174,7 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 				panic("unknown bus packet type: " + string(chunk[0]))
 			}
 		}
-		if currentSection != nil {
-			sections <- IMapSection(currentSection)
-		}
+		sendSection(currentSection, sections)
 	}()
 	return
 }
