@@ -205,6 +205,7 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 				// will send immediately to not to wait for next packet
 				objectSection.elems = append(objectSection.elems, &element{Value: valueBytes})
 				sections <- objectSection
+				currentSection = nil
 			default:
 				panic("unknown bus packet type: " + string(chunk[0]))
 			}
