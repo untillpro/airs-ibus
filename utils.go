@@ -2,6 +2,7 @@ package ibus
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"runtime/debug"
 )
@@ -27,12 +28,10 @@ func CreateErrorResponse(code int, err error) *Response {
 
 func readSection(ch <-chan []byte, kind SectionKind) *sectionData {
 	sectionTypeBytes := []byte{}
-	if kind != SectionKindObject {
-		ok := false
-		sectionTypeBytes, ok = <-ch
-		if !ok {
-			return nil
-		}
+	ok := false
+	sectionTypeBytes, ok = <-ch
+	if !ok {
+		return nil
 	}
 	pathElem, ok := <-ch
 	if !ok {
@@ -61,7 +60,7 @@ type sectionData struct {
 	currentElem int
 }
 
-// ToJSON encodes the section to JSON and writes it to `buf` 
+// ToJSON encodes the section to JSON and writes it to `buf`
 func (s *sectionData) ToJSON(buf *bytes.Buffer) {
 	buf.WriteString("{")
 	if len(s.Type()) > 0 {
@@ -111,19 +110,19 @@ type sectionDataArray struct {
 }
 
 func (s *sectionDataArray) Next() (value []byte, ok bool) {
-	if len(s.elems) <= s.currentElem {
-		return nil, false
-	}
-	s.currentElem++
-	return s.elems[s.currentElem].Value, true
+	_, value, ok = s.sectionData.Next()
+	return
 }
 
 func (s *sectionData) Next() (name string, value []byte, ok bool) {
 	if len(s.elems) <= s.currentElem {
 		return "", nil, false
 	}
+	name = s.elems[s.currentElem].Name
+	value = s.elems[s.currentElem].Value
+	ok = true
 	s.currentElem++
-	return s.elems[s.currentElem].Name, s.elems[s.currentElem].Value, true
+	return
 }
 
 func (s *sectionData) Value() []byte {
@@ -144,9 +143,60 @@ func sendSection(s *sectionData, sections chan ISection) {
 		sections <- IArraySection(&sectionDataArray{s})
 	case SectionKindMap:
 		sections <- IMapSection(s)
-	case SectionKindObject:
-		sections <- IObjectSection(s)
 	}
+}
+
+// ResultSenderImpl s.e.
+type ResultSenderImpl struct {
+	Chunks   chan []byte
+	skipName bool
+}
+
+// StartArraySection s.e.
+func (rsi *ResultSenderImpl) StartArraySection(sectionType string, path []string) {
+	rsi.startSection(BusPacketSectionArray, sectionType, path)
+	rsi.skipName = true
+}
+
+// ObjectSection s.e.
+func (rsi *ResultSenderImpl) ObjectSection(sectionType string, path []string, element interface{}) (err error) {
+	bytes, err := json.Marshal(element)
+	if err != nil {
+		return err
+	}
+	rsi.startSection(BusPacketSectionObject, sectionType, path)
+	rsi.Chunks <- bytes
+	return nil
+
+}
+
+// StartMapSection s.e.
+func (rsi *ResultSenderImpl) StartMapSection(sectionType string, path []string) {
+	rsi.startSection(BusPacketSectionMap, sectionType, path)
+}
+
+// SendElement s.e.
+func (rsi *ResultSenderImpl) SendElement(name string, element interface{}) (err error) {
+	bytes, err := json.Marshal(element)
+	if err != nil {
+		return err
+	}
+	rsi.Chunks <- []byte{byte(BusPacketElement)}
+	if !rsi.skipName {
+		rsi.Chunks <- []byte(name)
+	}
+	rsi.Chunks <- bytes
+	return nil
+}
+
+func (rsi *ResultSenderImpl) startSection(packetType BusPacketType, sectionType string, path []string) {
+	rsi.Chunks <- []byte{byte(packetType)}
+	rsi.Chunks <- []byte(sectionType)
+	for _, p := range path {
+		rsi.Chunks <- []byte(p)
+	}
+	rsi.Chunks <- []byte{0}
+	rsi.skipName = false
 }
 
 // BytesToSections converts chan []byte to chan ISection
