@@ -21,7 +21,10 @@ var SendRequest func(ctx context.Context,
 var RequestHandler func(ctx context.Context, sender interface{}, request Request)
 
 // SendResponse used by app
+var SendResponse func(ctx context.Context, sender interface{}, response Response)
+
+// SendParallelResponse s.e.
 // If chunks is not nil they must be readed by implementation to the end
 // Chunks must be closed by sender
 // Non-nil chunksError when chunks are closed means an error in chunks
-var SendResponse func(ctx context.Context, sender interface{}, response Response, chunks <-chan []byte, chunksError *error)
+var SendParallelResponse func(ctx context.Context, sender interface{}, chunks <-chan []byte, chunksError *error)
