@@ -1,7 +1,6 @@
 package ibus
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"runtime/debug"
@@ -9,8 +8,8 @@ import (
 
 // CreateResponse creates *Response with given status code and string data
 // TODO Why pointer is used here?
-func CreateResponse(code int, message string) *Response {
-	return &Response{
+func CreateResponse(code int, message string) Response {
+	return Response{
 		StatusCode: code,
 		Data:       []byte(message),
 	}
@@ -18,12 +17,17 @@ func CreateResponse(code int, message string) *Response {
 
 // CreateErrorResponse creates *Response with given status code, error message and ContentType "plain/text"
 // TODO Why pointer is used here?
-func CreateErrorResponse(code int, err error) *Response {
-	return &Response{
+func CreateErrorResponse(code int, err error) Response {
+	return Response{
 		StatusCode:  code,
 		Data:        []byte(err.Error()),
 		ContentType: "plain/text",
 	}
+}
+
+// NewResultSender creates IResultSender instance
+func NewResultSender(chunks chan []byte) IResultSender {
+	return &ResultSender{chunks: chunks}
 }
 
 func readSection(ch <-chan []byte, kind SectionKind) *sectionData {
@@ -46,55 +50,21 @@ func readSection(ch <-chan []byte, kind SectionKind) *sectionData {
 		}
 	}
 	return &sectionData{
-		sectionType: string(sectionTypeBytes),
-		path:        path,
-		sectionKind: kind,
+		sectionType:      string(sectionTypeBytes),
+		path:             path,
+		sectionKind:      kind,
+		ch:               ch,
+		nextPacketTypeCh: make(chan BusPacketType),
 	}
 }
 
 type sectionData struct {
-	sectionType string
-	path        []string
-	sectionKind SectionKind
-	elems       []*element
-	currentElem int
-}
-
-// ToJSON encodes the section to JSON and writes it to `buf`
-func (s *sectionData) ToJSON(buf *bytes.Buffer) {
-	buf.WriteString("{")
-	if len(s.Type()) > 0 {
-		buf.WriteString(fmt.Sprintf(`"type":"%s",`, s.Type()))
-	}
-	if len(s.Path()) > 0 {
-		buf.WriteString(`"path":[`)
-		for _, path := range s.Path() {
-			buf.WriteString(fmt.Sprintf(`"%s",`, path))
-		}
-		buf.Truncate(buf.Len() - 1)
-		buf.WriteString("],")
-	}
-	if len(s.elems) > 0 {
-		buf.WriteString(`"elements":`)
-		finalizer := ""
-		if s.sectionKind == SectionKindArray {
-			buf.WriteString("[")
-			finalizer = "]"
-		} else if s.sectionKind != SectionKindObject {
-			buf.WriteString("{")
-			finalizer = "}"
-		}
-		for _, elem := range s.elems {
-			if len(elem.Name) > 0 {
-				buf.WriteString(fmt.Sprintf(`"%s":`, elem.Name))
-			}
-			buf.Write(elem.Value)
-			buf.WriteString(",")
-		}
-		buf.Truncate(buf.Len() - 1)
-		buf.WriteString(finalizer)
-	}
-	buf.WriteString("}")
+	sectionType      string
+	path             []string
+	sectionKind      SectionKind
+	nextPacketTypeCh chan BusPacketType
+	ch               <-chan []byte
+	objValue         []byte
 }
 
 func (s *sectionData) Type() string {
@@ -115,91 +85,99 @@ func (s *sectionDataArray) Next() (value []byte, ok bool) {
 }
 
 func (s *sectionData) Next() (name string, value []byte, ok bool) {
-	if len(s.elems) <= s.currentElem {
-		return "", nil, false
+	chunk, okCh := <-s.ch
+	if !okCh {
+		s.nextPacketTypeCh <- BusPacketSectionUnspecified
+		return
 	}
-	name = s.elems[s.currentElem].Name
-	value = s.elems[s.currentElem].Value
-	ok = true
-	s.currentElem++
-	return
+	if BusPacketType(chunk[0]) != BusPacketElement {
+		s.nextPacketTypeCh <- BusPacketType(chunk[0])
+		return
+	}
+	nameBytes := []byte{}
+	if s.sectionKind != SectionKindArray {
+		nameBytes, okCh = <-s.ch
+		if !okCh {
+			s.nextPacketTypeCh <- BusPacketSectionUnspecified
+			return
+		}
+	}
+	valueBytes, okCh := <-s.ch
+	if !okCh {
+		s.nextPacketTypeCh <- BusPacketSectionUnspecified
+		return
+	}
+	return string(nameBytes), valueBytes, true
 }
 
 func (s *sectionData) Value() []byte {
-	return s.elems[0].Value
+	return s.objValue
 }
 
 type element struct {
-	Name  string
-	Value []byte
+	name  string
+	value []byte
 }
 
-func sendSection(s *sectionData, sections chan ISection) {
-	if s == nil {
-		return
-	}
-	switch s.sectionKind {
-	case SectionKindArray:
-		sections <- IArraySection(&sectionDataArray{s})
-	case SectionKindMap:
-		sections <- IMapSection(s)
-	}
-}
-
-// ResultSenderImpl s.e.
-type ResultSenderImpl struct {
-	Chunks   chan []byte
+// ResultSender s.e.
+type ResultSender struct {
+	chunks   chan []byte
 	skipName bool
 }
 
 // StartArraySection s.e.
-func (rsi *ResultSenderImpl) StartArraySection(sectionType string, path []string) {
+func (rsi *ResultSender) StartArraySection(sectionType string, path []string) {
 	rsi.startSection(BusPacketSectionArray, sectionType, path)
 	rsi.skipName = true
 }
 
 // ObjectSection s.e.
-func (rsi *ResultSenderImpl) ObjectSection(sectionType string, path []string, element interface{}) (err error) {
+func (rsi *ResultSender) ObjectSection(sectionType string, path []string, element interface{}) (err error) {
 	bytes, err := json.Marshal(element)
 	if err != nil {
 		return err
 	}
 	rsi.startSection(BusPacketSectionObject, sectionType, path)
-	rsi.Chunks <- bytes
+	rsi.chunks <- bytes
 	return nil
 
 }
 
 // StartMapSection s.e.
-func (rsi *ResultSenderImpl) StartMapSection(sectionType string, path []string) {
+func (rsi *ResultSender) StartMapSection(sectionType string, path []string) {
 	rsi.startSection(BusPacketSectionMap, sectionType, path)
 }
 
 // SendElement s.e.
-func (rsi *ResultSenderImpl) SendElement(name string, element interface{}) (err error) {
+// if element is []byte then send it as is
+func (rsi *ResultSender) SendElement(name string, element interface{}) (err error) {
 	bytes, err := json.Marshal(element)
 	if err != nil {
 		return err
 	}
-	rsi.Chunks <- []byte{byte(BusPacketElement)}
+	rsi.chunks <- []byte{byte(BusPacketElement)}
 	if !rsi.skipName {
-		rsi.Chunks <- []byte(name)
+		rsi.chunks <- []byte(name)
 	}
-	rsi.Chunks <- bytes
+	rsi.chunks <- bytes
 	return nil
 }
 
-func (rsi *ResultSenderImpl) startSection(packetType BusPacketType, sectionType string, path []string) {
-	rsi.Chunks <- []byte{byte(packetType)}
-	rsi.Chunks <- []byte(sectionType)
+func (rsi *ResultSender) startSection(packetType BusPacketType, sectionType string, path []string) {
+	rsi.chunks <- []byte{byte(packetType)}
+	rsi.chunks <- []byte(sectionType)
 	for _, p := range path {
-		rsi.Chunks <- []byte(p)
+		rsi.chunks <- []byte(p)
 	}
-	rsi.Chunks <- []byte{0}
+	rsi.chunks <- []byte{0}
 	rsi.skipName = false
 }
 
 // BytesToSections converts chan []byte to chan ISection
+// Caller should not process chan ISection by >1 goroutine (Elements and Sections will be mixed up)
+// Cons of not to collect elements:
+// - caller side should not process chan ISection by >1 goroutine
+// - MapSection or ArraySection received -> caller must call Next() until !ok even caller does not need elements
 func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection) {
 	sections = make(chan ISection)
 	go func() {
@@ -213,54 +191,50 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 			}
 			close(sections)
 		}()
-		var currentSection *sectionData
-		for chunk := range ch {
-			switch BusPacketType(chunk[0]) {
-			case BusPacketSectionMap:
-				sendSection(currentSection, sections)
-				currentSection = readSection(ch, SectionKindMap)
-				if currentSection == nil {
-					return
-				}
-			case BusPacketElement:
-				nameBytes := []byte{}
-				if currentSection.sectionKind != SectionKindArray {
-					ok := false
-					nameBytes, ok = <-ch
-					if !ok {
-						return
-					}
-				}
-				valueBytes, ok := <-ch
+		nextBusPacketType := BusPacketSectionUnspecified
+		for {
+			if nextBusPacketType == BusPacketSectionUnspecified {
+				chunk, ok := <-ch
 				if !ok {
-					return
+					break
 				}
-				currentSection.elems = append(currentSection.elems, &element{Name: string(nameBytes), Value: valueBytes})
-			case BusPacketSectionArray:
-				sendSection(currentSection, sections)
-				currentSection = readSection(ch, SectionKindArray)
-				if currentSection == nil {
-					return
-				}
-			case BusPacketSectionObject:
-				sendSection(currentSection, sections)
-				objectSection := readSection(ch, SectionKindObject)
-				if objectSection == nil {
-					return
-				}
-				valueBytes, ok := <-ch
-				if !ok {
-					return
-				}
-				// will send immediately to not to wait for next packet
-				objectSection.elems = append(objectSection.elems, &element{Value: valueBytes})
-				sections <- objectSection
-				currentSection = nil
-			default:
-				panic("unknown bus packet type: " + string(chunk[0]))
+				nextBusPacketType = BusPacketType(chunk[0])
 			}
+			nextBusPacketType = processChunk(ch, nextBusPacketType, sections)
 		}
-		sendSection(currentSection, sections)
 	}()
+	return
+}
+
+func processChunk(ch <-chan []byte, bpt BusPacketType, sections chan ISection) (nextPacketType BusPacketType) {
+	switch bpt {
+	case BusPacketSectionMap:
+		sec := readSection(ch, SectionKindMap)
+		if sec == nil {
+			return
+		}
+		sections <- sec
+		return <-sec.nextPacketTypeCh
+	case BusPacketSectionArray:
+		sec := readSection(ch, SectionKindArray)
+		if sec == nil {
+			return
+		}
+		sections <- &sectionDataArray{sec}
+		return <-sec.nextPacketTypeCh
+	case BusPacketSectionObject:
+		sec := readSection(ch, SectionKindObject)
+		if sec == nil {
+			return
+		}
+		ok := false
+		sec.objValue, ok = <-ch
+		if !ok {
+			return
+		}
+		sections <- sec
+	default:
+		panic("unepected bus packet type: " + string(bpt))
+	}
 	return
 }

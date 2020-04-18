@@ -4,8 +4,6 @@
 
 package ibus
 
-import "bytes"
-
 // HTTPMethod s.e.
 // see const.go/HTTPMethodGET...
 type HTTPMethod int
@@ -51,8 +49,10 @@ type BusPacketType int
 type SectionKind int
 
 const (
+	// BusPacketSectionUnspecified s.e.
+	BusPacketSectionUnspecified BusPacketType = iota
 	// BusPacketSectionMap s.e.
-	BusPacketSectionMap BusPacketType = iota
+	BusPacketSectionMap
 	// BusPacketElement s.e.
 	BusPacketElement
 	// BusPacketSectionArray s.e.
@@ -75,7 +75,6 @@ const (
 // ISection s.e.
 type ISection interface {
 	Type() string
-	ToJSON(buf *bytes.Buffer)
 }
 
 // IDataSection s.e.
@@ -91,13 +90,34 @@ type IObjectSection interface {
 }
 
 // IArraySection s.e.
+// user MUST call Next() until ok
 type IArraySection interface {
 	IDataSection
 	Next() (value []byte, ok bool)
 }
 
 // IMapSection s.e.
+// user MUST call Next() until ok
 type IMapSection interface {
 	IDataSection
 	Next() (name string, value []byte, ok bool)
+}
+
+// IResultSender used by ParallelFunction
+type IResultSender interface {
+	// Must be called before first Send*
+	// Can be called multiple times - each time new section started
+	// Section path may NOT include data from database, only constants should be used
+	StartArraySection(sectionType string, path []string)
+	StartMapSection(sectionType string, path []string)
+	ObjectSection(sectionType string, path []string, element interface{}) (err error)
+
+	// For reading journal
+	// StartBinarySection(sectionType string, path []string)
+
+	// element should be "marshallable" by json package
+	// Send* can be called multiple times per array
+	// name is ignored for Array section
+	// For reading journal
+	SendElement(name string, element interface{}) (err error)
 }
