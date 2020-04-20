@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime/debug"
-
-	"github.com/untillpro/gochips"
 )
 
 // CreateResponse creates *Response with given status code and string data
@@ -86,7 +84,7 @@ type sectionDataObject struct {
 }
 
 func (s *sectionDataArray) Next() (value []byte, ok bool) {
-	elem, ok := <-s.elems 
+	elem, ok := <-s.elems
 	if !ok {
 		return
 	}
@@ -94,7 +92,7 @@ func (s *sectionDataArray) Next() (value []byte, ok bool) {
 }
 
 func (s *sectionDataMap) Next() (name string, value []byte, ok bool) {
-	elem, ok := <-s.elems 
+	elem, ok := <-s.elems
 	if !ok {
 		return
 	}
@@ -124,9 +122,14 @@ func (rsi *ResultSender) StartArraySection(sectionType string, path []string) {
 
 // ObjectSection s.e.
 func (rsi *ResultSender) ObjectSection(sectionType string, path []string, element interface{}) (err error) {
-	bytes, err := json.Marshal(element)
-	if err != nil {
-		return err
+	bytes := []byte{}
+	if bytesJSON, ok := element.([]byte); ok {
+		bytes = bytesJSON
+	} else {
+		bytes, err = json.Marshal(element)
+		if err != nil {
+			return err
+		}
 	}
 	rsi.startSection(BusPacketSectionObject, sectionType, path)
 	rsi.chunks <- bytes
@@ -142,9 +145,14 @@ func (rsi *ResultSender) StartMapSection(sectionType string, path []string) {
 // SendElement s.e.
 // if element is []byte then send it as is
 func (rsi *ResultSender) SendElement(name string, element interface{}) (err error) {
-	bytes, err := json.Marshal(element)
-	if err != nil {
-		return err
+	bytes := []byte{}
+	if bytesJSON, ok := element.([]byte); ok {
+		bytes = bytesJSON
+	} else {
+		bytes, err = json.Marshal(element)
+		if err != nil {
+			return err
+		}
 	}
 	rsi.chunks <- []byte{byte(BusPacketElement)}
 	if !rsi.skipName {
@@ -185,7 +193,6 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 		ok := false
 		for chunk := range ch {
 			if len(chunk) == 0 {
-				gochips.Error("ByteToSection: empty chunk")
 				continue
 			}
 			switch BusPacketType(chunk[0]) {
