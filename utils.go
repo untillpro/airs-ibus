@@ -174,7 +174,7 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 		defer func() {
 			if r := recover(); r != nil {
 				stackTrace := string(debug.Stack())
-				err := fmt.Errorf("panic on channel []byte -> interface{}\n%s", stackTrace)
+				err := fmt.Errorf("panic on channel []byte -> interface{}:%s\n%s", r, stackTrace)
 				*chunksErr = err
 				for range ch {
 				}
