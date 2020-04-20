@@ -9,7 +9,6 @@ import (
 )
 
 // CreateResponse creates *Response with given status code and string data
-// TODO Why pointer is used here?
 func CreateResponse(code int, message string) Response {
 	return Response{
 		StatusCode: code,
@@ -18,7 +17,6 @@ func CreateResponse(code int, message string) Response {
 }
 
 // CreateErrorResponse creates *Response with given status code, error message and ContentType "plain/text"
-// TODO Why pointer is used here?
 func CreateErrorResponse(code int, err error) Response {
 	return Response{
 		StatusCode:  code,
