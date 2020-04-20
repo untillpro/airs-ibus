@@ -6,6 +6,7 @@ package ibus
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,6 +27,7 @@ func TestBasicUsage(t *testing.T) {
 		rs.SendElement("id2", map[string]interface{}{
 			"fld2": "fld2Val",
 		})
+		chunks <- []byte{} // should be skipped
 		rs.StartArraySection("secArr", []string{"classifier", "4"})
 		rs.SendElement("", "arrEl1")
 		rs.SendElement("", "arrEl2")
@@ -126,4 +128,119 @@ func TestPanicOnConvertToISections(t *testing.T) {
 	_, ok := <-sections
 	require.False(t, ok)
 	require.NotNil(t, chunksErr)
+}
+
+func TestMapElementRawBytes(t *testing.T) {
+	chunks := make(chan []byte)
+	rs := NewResultSender(chunks)
+	var chunksErr error
+	go func() {
+		elem := map[string]interface{}{
+			"fld3": "fld3Val",
+		}
+		elementJSONBytes, err := json.Marshal(&elem)
+		require.Nil(t, err)
+		rs.StartMapSection("deps", []string{"classifier", "3"})
+		rs.SendElement("id3", elementJSONBytes)
+		close(chunks)
+	}()
+
+	sections := BytesToSections(chunks, &chunksErr)
+
+	section := <-sections
+	secMap := section.(IMapSection)
+	require.Equal(t, "deps", secMap.Type())
+	require.Equal(t, []string{"classifier", "3"}, secMap.Path())
+	name, value, ok := secMap.Next()
+	require.True(t, ok)
+	require.Equal(t, "id3", name)
+	valMap := map[string]interface{}{}
+	require.Nil(t, json.Unmarshal(value, &valMap))
+	require.Equal(t, map[string]interface{}{"fld3": "fld3Val"}, valMap)
+	name, value, ok = secMap.Next()
+	require.False(t, ok)
+	require.Empty(t, name)
+	require.Nil(t, value)
+
+	_, ok = <-sections
+	require.False(t, ok)
+}
+
+func TestObjectElementRawBytes(t *testing.T) {
+	chunks := make(chan []byte)
+	rs := NewResultSender(chunks)
+	var chunksErr error
+	go func() {
+		val := map[string]interface{}{
+			"total": 1,
+		}
+		valJSONBytes, err := json.Marshal(&val)
+		require.Nil(t, err)
+		rs.ObjectSection("secObj", []string{"meta"}, valJSONBytes)
+		close(chunks)
+	}()
+
+	sections := BytesToSections(chunks, &chunksErr)
+
+	section := <-sections
+	secObj := section.(IObjectSection)
+	require.Equal(t, "secObj", secObj.Type())
+	require.Equal(t, []string{"meta"}, secObj.Path())
+	valMap := map[string]interface{}{}
+	require.Nil(t, json.Unmarshal(secObj.Value(), &valMap))
+	require.Equal(t, map[string]interface{}{"total": float64(1)}, valMap)
+
+	_, ok := <-sections
+	require.False(t, ok)
+}
+
+func TestElementsErrors(t *testing.T) {
+	chunks := make(chan []byte)
+	rs := NewResultSender(chunks)
+	require.NotNil(t, rs.SendElement("", func() {}))
+	require.NotNil(t, rs.ObjectSection("", nil, func() {}))
+}
+
+func TestCreateResponse(t *testing.T) {
+	r := CreateResponse(1, "test")
+	require.Equal(t, 1, r.StatusCode)
+	require.Equal(t, "test", string(r.Data))
+	require.Empty(t, r.ContentType)
+}
+
+func TestCreateErrorResponse(t *testing.T) {
+	r := CreateErrorResponse(1, errors.New("test"))
+	require.Equal(t, 1, r.StatusCode)
+	require.Equal(t, "test", string(r.Data))
+	require.Equal(t, "plain/text", r.ContentType)
+}
+
+func TestStopOnChannelClose(t *testing.T) {
+	testStopOnChanneClose(t, BusPacketSectionMap)
+	testStopOnChanneClose(t, BusPacketSectionArray)
+	testStopOnChanneClose(t, BusPacketSectionObject)
+}
+
+func testStopOnChanneClose(t *testing.T, bpt BusPacketType) {
+	var chunksErr error
+	chunks := make(chan []byte)
+	go func() {
+		chunks <- []byte{byte(bpt)}
+		close(chunks)
+	}()
+	sections := BytesToSections(chunks, &chunksErr)
+
+	_, ok := <-sections
+	require.False(t, ok)
+
+	chunks = make(chan []byte)
+	go func() {
+		chunks <- []byte{byte(bpt)}
+		chunks <- []byte("secMap")
+		close(chunks)
+	}()
+	sections = BytesToSections(chunks, &chunksErr)
+
+	_, ok = <-sections
+	require.False(t, ok)
 }
