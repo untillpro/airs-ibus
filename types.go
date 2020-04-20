@@ -49,10 +49,8 @@ type BusPacketType int
 type SectionKind int
 
 const (
-	// BusPacketSectionUnspecified s.e.
-	BusPacketSectionUnspecified BusPacketType = iota
 	// BusPacketSectionMap s.e.
-	BusPacketSectionMap
+	BusPacketSectionMap BusPacketType = iota
 	// BusPacketElement s.e.
 	BusPacketElement
 	// BusPacketSectionArray s.e.
