@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime/debug"
+
+	"github.com/untillpro/gochips"
 )
 
 // CreateResponse creates *Response with given status code and string data
@@ -184,6 +186,10 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 		}()
 		ok := false
 		for chunk := range ch {
+			if len(chunk) == 0 {
+				gochips.Error("ByteToSection: empty chunk")
+				continue
+			}
 			switch BusPacketType(chunk[0]) {
 			case BusPacketSectionMap:
 				if currentSection = readSection(ch, SectionKindMap, currentSection); currentSection == nil {
