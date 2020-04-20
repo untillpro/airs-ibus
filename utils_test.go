@@ -221,7 +221,6 @@ func TestStopOnChannelClose(t *testing.T) {
 	testStopOnChanneClose(t, BusPacketSectionObject)
 }
 
-
 func testStopOnChanneClose(t *testing.T, bpt BusPacketType) {
 	var chunksErr error
 	chunks := make(chan []byte)
