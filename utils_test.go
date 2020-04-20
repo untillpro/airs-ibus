@@ -30,7 +30,61 @@ var (
 	}
 )
 
+func mapFromJSON(jsonBytes []byte) map[string]interface{} {
+	res := map[string]interface{}{}
+	if err := json.Unmarshal(jsonBytes, &res); err != nil {
+		panic(err)
+	}
+	return res
+}
+
 func TestBasicUsage(t *testing.T) {
+	chunks := make(chan []byte)
+	rs := NewResultSender(chunks)
+	var chunksErr error
+	go func() {
+		rs.ObjectSection("secObj", []string{"meta"}, expectedTotal)
+		rs.StartMapSection("secMap", []string{"classifier", "2"})
+		rs.SendElement("id1", expected1)
+		chunks <- []byte{} // should be skipped
+		rs.StartArraySection("secArr", []string{"classifier", "4"})
+		rs.SendElement("", "arrEl1")
+		close(chunks)
+	}()
+
+	sections := BytesToSections(chunks, &chunksErr)
+
+	section := <-sections
+	secObj := section.(IObjectSection)
+	require.Equal(t, "secObj", secObj.Type())
+	require.Equal(t, []string{"meta"}, secObj.Path())
+	require.Equal(t, expectedTotal, mapFromJSON(secObj.Value()))
+
+	section = <-sections
+	secMap := section.(IMapSection)
+	require.Equal(t, "secMap", secMap.Type())
+	require.Equal(t, []string{"classifier", "2"}, secMap.Path())
+	name, value, ok := secMap.Next()
+	require.Equal(t, "id1", name)
+	require.Equal(t, expected1, mapFromJSON(value))
+	_, _, ok = secMap.Next()
+	require.False(t, ok)
+
+	section = <-sections
+	secArr := section.(IArraySection)
+	require.Equal(t, "secArr", secArr.Type())
+	require.Equal(t, []string{"classifier", "4"}, secArr.Path())
+	value, ok = secArr.Next()
+	require.True(t, ok)
+	require.Equal(t, `"arrEl1"`, string(value))
+	value, ok = secArr.Next()
+	require.False(t, ok)
+
+	_, ok = <-sections
+	require.False(t, ok)
+}
+
+func TestFull(t *testing.T) {
 	chunks := make(chan []byte)
 	rs := NewResultSender(chunks)
 	var chunksErr error
@@ -121,6 +175,7 @@ func TestBasicUsage(t *testing.T) {
 
 	_, ok = <-sections
 	require.False(t, ok)
+
 }
 
 func TestPanicOnConvertToISections(t *testing.T) {
