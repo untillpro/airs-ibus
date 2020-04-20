@@ -16,6 +16,9 @@ func TestBasicUsage(t *testing.T) {
 	rs := NewResultSender(chunks)
 	var chunksErr error
 	go func() {
+		rs.ObjectSection("secObj", []string{"meta"}, map[string]interface{}{
+			"total": 1,
+		})
 		rs.StartMapSection("secMap", []string{"classifier", "2"})
 		rs.SendElement("id1", map[string]interface{}{
 			"fld1": "fld1Val",
@@ -26,9 +29,6 @@ func TestBasicUsage(t *testing.T) {
 		rs.StartArraySection("secArr", []string{"classifier", "4"})
 		rs.SendElement("", "arrEl1")
 		rs.SendElement("", "arrEl2")
-		rs.ObjectSection("secObj", []string{"meta"}, map[string]interface{}{
-			"total": 1,
-		})
 		rs.StartMapSection("deps", []string{"classifier", "3"})
 		rs.SendElement("id3", map[string]interface{}{
 			"fld3": "fld3Val",
@@ -40,14 +40,23 @@ func TestBasicUsage(t *testing.T) {
 	}()
 
 	sections := BytesToSections(chunks, &chunksErr)
+
 	section := <-sections
+	secObj := section.(IObjectSection)
+	require.Equal(t, "secObj", secObj.Type())
+	require.Equal(t, []string{"meta"}, secObj.Path())
+	valMap := map[string]interface{}{}
+	require.Nil(t, json.Unmarshal(secObj.Value(), &valMap))
+	require.Equal(t, map[string]interface{}{"total": float64(1)}, valMap)
+
+	section = <-sections
 	secMap := section.(IMapSection)
 	require.Equal(t, "secMap", secMap.Type())
 	require.Equal(t, []string{"classifier", "2"}, secMap.Path())
 	name, value, ok := secMap.Next()
 	require.True(t, ok)
 	require.Equal(t, "id1", name)
-	valMap := map[string]interface{}{}
+	valMap = map[string]interface{}{}
 	require.Nil(t, json.Unmarshal(value, &valMap))
 	require.Equal(t, map[string]interface{}{"fld1": "fld1Val"}, valMap)
 	name, value, ok = secMap.Next()
@@ -78,14 +87,6 @@ func TestBasicUsage(t *testing.T) {
 	value, ok = secArr.Next()
 	require.False(t, ok)
 	require.Nil(t, value)
-
-	section = <-sections
-	secObj := section.(IObjectSection)
-	require.Equal(t, "secObj", secObj.Type())
-	require.Equal(t, []string{"meta"}, secObj.Path())
-	valMap = map[string]interface{}{}
-	require.Nil(t, json.Unmarshal(secObj.Value(), &valMap))
-	require.Equal(t, map[string]interface{}{"total": float64(1)}, valMap)
 
 	section = <-sections
 	secMap = section.(IMapSection)

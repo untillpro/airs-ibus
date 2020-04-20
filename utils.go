@@ -45,12 +45,9 @@ func readSection(ch <-chan []byte, kind SectionKind, prevSection *sectionData) (
 		return nil
 	}
 	path := []string{}
-	for pathElem[0] != 0 {
+	for ok && pathElem[0] != 0 {
 		path = append(path, string(pathElem))
 		pathElem, ok = <-ch
-		if !ok {
-			break
-		}
 	}
 	return &sectionData{
 		sectionType: string(sectionTypeBytes),
@@ -80,12 +77,23 @@ type sectionDataArray struct {
 	*sectionData
 }
 
-func (s *sectionDataArray) Next() (value []byte, ok bool) {
-	_, value, ok = s.sectionData.Next()
-	return
+type sectionDataMap struct {
+	*sectionData
 }
 
-func (s *sectionData) Next() (name string, value []byte, ok bool) {
+type sectionDataObject struct {
+	*sectionData
+}
+
+func (s *sectionDataArray) Next() (value []byte, ok bool) {
+	elem, ok := <-s.elems 
+	if !ok {
+		return
+	}
+	return elem.value, true
+}
+
+func (s *sectionDataMap) Next() (name string, value []byte, ok bool) {
 	elem, ok := <-s.elems 
 	if !ok {
 		return
@@ -93,7 +101,7 @@ func (s *sectionData) Next() (name string, value []byte, ok bool) {
 	return elem.name, elem.value, true
 }
 
-func (s *sectionData) Value() []byte {
+func (s *sectionDataObject) Value() []byte {
 	return s.objValue
 }
 
@@ -181,7 +189,7 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 				if currentSection = readSection(ch, SectionKindMap, currentSection); currentSection == nil {
 					return
 				}
-				sections <- currentSection
+				sections <- &sectionDataMap{currentSection}
 			case BusPacketElement:
 				nameBytes := []byte{}
 				if currentSection.sectionKind != SectionKindArray {
@@ -209,7 +217,7 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 				if !ok {
 					return
 				}
-				sections <- currentSection
+				sections <- &sectionDataObject{currentSection}
 				currentSection = nil
 			default:
 				panic("unepected bus packet type: " + string(chunk[0]))
