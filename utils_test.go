@@ -30,14 +30,6 @@ var (
 	}
 )
 
-func mapFromJSON(jsonBytes []byte) map[string]interface{} {
-	res := map[string]interface{}{}
-	if err := json.Unmarshal(jsonBytes, &res); err != nil {
-		panic(err)
-	}
-	return res
-}
-
 func TestBasicUsage(t *testing.T) {
 	chunks := make(chan []byte)
 	rs := NewResultSender(chunks)
@@ -357,4 +349,12 @@ func testStopOnChanneClose(t *testing.T, bpt BusPacketType) {
 
 	_, ok = <-sections
 	require.False(t, ok)
+}
+
+func mapFromJSON(jsonBytes []byte) map[string]interface{} {
+	res := map[string]interface{}{}
+	if err := json.Unmarshal(jsonBytes, &res); err != nil {
+		panic(err)
+	}
+	return res
 }
