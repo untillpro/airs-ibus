@@ -351,6 +351,7 @@ func testStopOnChanneClose(t *testing.T, bpt BusPacketType) {
 	require.False(t, ok)
 }
 
+
 func mapFromJSON(jsonBytes []byte) map[string]interface{} {
 	res := map[string]interface{}{}
 	if err := json.Unmarshal(jsonBytes, &res); err != nil {
