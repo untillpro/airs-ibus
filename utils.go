@@ -29,9 +29,7 @@ func NewResultSender(chunks chan []byte) IResultSender {
 }
 
 func readSection(ch <-chan []byte, kind SectionKind, prevSection *sectionData) (nextSection *sectionData) {
-	if prevSection != nil {
-		close(prevSection.elems)
-	}
+	closeSection(prevSection)
 	sectionTypeBytes := []byte{}
 	ok := false
 	sectionTypeBytes, ok = <-ch
@@ -231,7 +229,7 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 				sections <- &sectionDataObject{currentSection}
 				currentSection = nil
 			default:
-				panic("unepected bus packet type: " + string(chunk[0]))
+				panic("unexpected bus packet type: " + string(chunk[0]))
 			}
 		}
 	}()
