@@ -304,8 +304,9 @@ func TestStopOnChannelCloseOnObjectValue(t *testing.T) {
 	}()
 	sections := BytesToSections(chunks, &chunksErr)
 
-	_, ok := <-sections
-	require.False(t, ok)
+	objISec := <-sections
+	objSec := objISec.(IObjectSection)
+	require.Nil(t, objSec.Value())
 
 }
 
@@ -350,7 +351,6 @@ func testStopOnChanneClose(t *testing.T, bpt BusPacketType) {
 	_, ok = <-sections
 	require.False(t, ok)
 }
-
 
 func mapFromJSON(jsonBytes []byte) map[string]interface{} {
 	res := map[string]interface{}{}

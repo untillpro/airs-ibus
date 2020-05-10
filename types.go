@@ -82,20 +82,21 @@ type IDataSection interface {
 }
 
 // IObjectSection s.e.
+// Caller MUST call Value() even if it does not need the value
 type IObjectSection interface {
 	IDataSection
 	Value() []byte
 }
 
 // IArraySection s.e.
-// user MUST call Next() until ok
+// Caller MUST call Next() until !ok
 type IArraySection interface {
 	IDataSection
 	Next() (value []byte, ok bool)
 }
 
 // IMapSection s.e.
-// user MUST call Next() until ok
+// Caller MUST call Next() until !ok
 type IMapSection interface {
 	IDataSection
 	Next() (name string, value []byte, ok bool)
@@ -117,5 +118,6 @@ type IResultSender interface {
 	// Send* can be called multiple times per array
 	// name is ignored for Array section
 	// For reading journal
+	// if element is []byte then it will be sent sent as is. Note: JSON malformation is possible for airs-router's http client. Caller must take care of this.
 	SendElement(name string, element interface{}) (err error)
 }
