@@ -82,9 +82,10 @@ type IDataSection interface {
 }
 
 // IObjectSection s.e.
-// Caller MUST call Value() even if it does not need the value
 type IObjectSection interface {
 	IDataSection
+	// Caller MUST call Value() even if it does not need the value
+	// note: second and further Value() calls will return nil
 	Value() []byte
 }
 

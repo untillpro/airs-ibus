@@ -51,6 +51,7 @@ func TestBasicUsage(t *testing.T) {
 	require.Equal(t, "secObj", secObj.Type())
 	require.Equal(t, []string{"meta"}, secObj.Path())
 	require.Equal(t, expectedTotal, mapFromJSON(secObj.Value()))
+	require.Nil(t, secObj.Value())
 
 	section = <-sections
 	secMap := section.(IMapSection)

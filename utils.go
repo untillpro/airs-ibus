@@ -78,6 +78,7 @@ type sectionDataMap struct {
 
 type sectionDataObject struct {
 	*sectionData
+	valueGot bool
 }
 
 func (s *sectionDataArray) Next() (value []byte, ok bool) {
@@ -97,10 +98,14 @@ func (s *sectionDataMap) Next() (name string, value []byte, ok bool) {
 }
 
 func (s *sectionDataObject) Value() []byte {
+	if s.valueGot {
+		return nil
+	}
 	elem, ok := <-s.elems
 	if !ok {
 		return nil
 	}
+	s.valueGot = true
 	return elem.value
 }
 
@@ -230,7 +235,7 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 				if currentSection = readSection(ch, SectionKindObject, currentSection); currentSection == nil {
 					return
 				}
-				sections <- &sectionDataObject{currentSection}
+				sections <- &sectionDataObject{currentSection, false}
 			default:
 				panic("unexpected bus packet type: " + string(chunk[0]))
 			}
