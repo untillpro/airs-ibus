@@ -29,9 +29,7 @@ func NewResultSender(chunks chan []byte) IResultSender {
 }
 
 func readSection(ch <-chan []byte, kind SectionKind, prevSection *sectionData) (nextSection *sectionData) {
-	if prevSection != nil {
-		close(prevSection.elems)
-	}
+	closeSection(prevSection)
 	sectionTypeBytes := []byte{}
 	ok := false
 	sectionTypeBytes, ok = <-ch
@@ -60,7 +58,6 @@ type sectionData struct {
 	path        []string
 	sectionKind SectionKind
 	elems       chan *element
-	objValue    []byte
 }
 
 func (s *sectionData) Type() string {
@@ -81,6 +78,7 @@ type sectionDataMap struct {
 
 type sectionDataObject struct {
 	*sectionData
+	valueGot bool
 }
 
 func (s *sectionDataArray) Next() (value []byte, ok bool) {
@@ -100,7 +98,15 @@ func (s *sectionDataMap) Next() (name string, value []byte, ok bool) {
 }
 
 func (s *sectionDataObject) Value() []byte {
-	return s.objValue
+	if s.valueGot {
+		return nil
+	}
+	elem, ok := <-s.elems
+	if !ok {
+		return nil
+	}
+	s.valueGot = true
+	return elem.value
 }
 
 type element struct {
@@ -122,17 +128,12 @@ func (rsi *ResultSender) StartArraySection(sectionType string, path []string) {
 
 // ObjectSection s.e.
 func (rsi *ResultSender) ObjectSection(sectionType string, path []string, element interface{}) (err error) {
-	bytes := []byte{}
-	if bytesJSON, ok := element.([]byte); ok {
-		bytes = bytesJSON
-	} else {
-		bytes, err = json.Marshal(element)
-		if err != nil {
-			return err
-		}
+	bytes, err := rsi.marshalElem(element)
+	if err != nil {
+		return err
 	}
 	rsi.startSection(BusPacketSectionObject, sectionType, path)
-	rsi.chunks <- bytes
+	rsi.sendElementBytes("", bytes)
 	return nil
 
 }
@@ -143,23 +144,33 @@ func (rsi *ResultSender) StartMapSection(sectionType string, path []string) {
 }
 
 // SendElement s.e.
-// if element is []byte then send it as is
+// if element is []byte then send it as is. Note: if the element will be read by airs-router then JSON malformation is possible. Caller must take care of this.
 func (rsi *ResultSender) SendElement(name string, element interface{}) (err error) {
-	bytes := []byte{}
-	if bytesJSON, ok := element.([]byte); ok {
-		bytes = bytesJSON
-	} else {
-		bytes, err = json.Marshal(element)
-		if err != nil {
-			return err
-		}
+	bytes, err := rsi.marshalElem(element)
+	if err != nil {
+		return err
 	}
+	rsi.sendElementBytes(name, bytes)
+	return nil
+}
+
+func (rsi *ResultSender) sendElementBytes(name string, elemBytes []byte) {
 	rsi.chunks <- []byte{byte(BusPacketElement)}
 	if !rsi.skipName {
 		rsi.chunks <- []byte(name)
 	}
-	rsi.chunks <- bytes
-	return nil
+	rsi.chunks <- elemBytes
+}
+
+func (rsi *ResultSender) marshalElem(element interface{}) ([]byte, error) {
+	if bytesRaw, ok := element.([]byte); ok {
+		return bytesRaw, nil
+	}
+	bytesJSON, err := json.Marshal(element)
+	if err != nil {
+		return nil, err
+	}
+	return bytesJSON, nil
 }
 
 func (rsi *ResultSender) startSection(packetType BusPacketType, sectionType string, path []string) {
@@ -224,14 +235,9 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 				if currentSection = readSection(ch, SectionKindObject, currentSection); currentSection == nil {
 					return
 				}
-				currentSection.objValue, ok = <-ch
-				if !ok {
-					return
-				}
-				sections <- &sectionDataObject{currentSection}
-				currentSection = nil
+				sections <- &sectionDataObject{currentSection, false}
 			default:
-				panic("unepected bus packet type: " + string(chunk[0]))
+				panic("unexpected bus packet type: " + string(chunk[0]))
 			}
 		}
 	}()

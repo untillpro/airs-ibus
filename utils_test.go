@@ -51,6 +51,7 @@ func TestBasicUsage(t *testing.T) {
 	require.Equal(t, "secObj", secObj.Type())
 	require.Equal(t, []string{"meta"}, secObj.Path())
 	require.Equal(t, expectedTotal, mapFromJSON(secObj.Value()))
+	require.Nil(t, secObj.Value()) // nil on second and further calls
 
 	section = <-sections
 	secMap := section.(IMapSection)
@@ -304,8 +305,9 @@ func TestStopOnChannelCloseOnObjectValue(t *testing.T) {
 	}()
 	sections := BytesToSections(chunks, &chunksErr)
 
-	_, ok := <-sections
-	require.False(t, ok)
+	objISec := <-sections
+	objSec := objISec.(IObjectSection)
+	require.Nil(t, objSec.Value())
 
 }
 
