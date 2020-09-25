@@ -3,9 +3,7 @@ package ibus
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"runtime/debug"
-	"strconv"
 )
 
 // CreateResponse creates *Response with given status code and string data
@@ -187,11 +185,9 @@ func (rsi *ResultSender) startSection(packetType BusPacketType, sectionType stri
 // Caller should not process chan ISection by >1 goroutine (Elements and Sections will be mixed up)
 // MapSection or ArraySection received -> caller must call Next() until !ok even if elements are not needed
 func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection) {
-	log.Println("BytesToSections start ")
 	sections = make(chan ISection)
 	go func() {
 		var currentSection *sectionData
-		counter := 0
 		defer func() {
 			if r := recover(); r != nil {
 				stackTrace := string(debug.Stack())
@@ -202,11 +198,6 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 			}
 			closeSection(currentSection)
 			close(sections)
-			_, ok := <-ch
-			if chunksErr != nil && *chunksErr != nil {
-				log.Printf("BytesToSections error: %v", *chunksErr)
-			}
-			log.Println("BytesToSections counter " + strconv.Itoa(counter) + ", ok:" + strconv.FormatBool(ok))
 		}()
 		ok := false
 		for chunk := range ch {
@@ -216,7 +207,6 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 			switch BusPacketType(chunk[0]) {
 			case BusPacketSectionMap:
 				if currentSection = readSection(ch, SectionKindMap, currentSection); currentSection == nil {
-					log.Println("BytesToSections 1")
 					return
 				}
 				sections <- &sectionDataMap{currentSection}
@@ -224,17 +214,11 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 				nameBytes := []byte{}
 				if currentSection.sectionKind != SectionKindArray {
 					if nameBytes, ok = <-ch; !ok {
-						log.Println("BytesToSections 2")
-						if chunksErr != nil && *chunksErr != nil {
-							log.Printf("BytesToSections error: %v", *chunksErr)
-						}
 						return
 					}
-					log.Println("!!!BytesToSections elem:" + string(nameBytes))
 				}
 				valueBytes, ok := <-ch
 				if !ok {
-					log.Println("BytesToSections 3")
 					return
 				}
 				if currentSection != nil {
@@ -242,20 +226,17 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 				}
 			case BusPacketSectionArray:
 				if currentSection = readSection(ch, SectionKindArray, currentSection); currentSection == nil {
-					log.Println("BytesToSections 4")
 					return
 				}
 				sections <- &sectionDataArray{currentSection}
 			case BusPacketSectionObject:
 				if currentSection = readSection(ch, SectionKindObject, currentSection); currentSection == nil {
-					log.Println("BytesToSections 5")
 					return
 				}
 				sections <- &sectionDataObject{currentSection, false}
 			default:
 				panic("unexpected bus packet type: " + string(chunk[0]))
 			}
-			counter++
 		}
 	}()
 	return
