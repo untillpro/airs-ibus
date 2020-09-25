@@ -7,7 +7,7 @@ package ibus
 import "time"
 
 // DefaultTimeout for PostRequest func
-const DefaultTimeout = 10 * time.Second
+const DefaultTimeout = 1000 * time.Second
 
 // HTTP methods
 const (

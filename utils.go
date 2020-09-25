@@ -203,6 +203,9 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 			closeSection(currentSection)
 			close(sections)
 			_, ok := <-ch
+			if chunksErr != nil && *chunksErr != nil {
+				log.Printf("BytesToSections error: %v", *chunksErr)
+			}
 			log.Println("BytesToSections counter " + strconv.Itoa(counter) + ", ok:" + strconv.FormatBool(ok))
 		}()
 		ok := false
@@ -222,6 +225,9 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 				if currentSection.sectionKind != SectionKindArray {
 					if nameBytes, ok = <-ch; !ok {
 						log.Println("BytesToSections 2")
+						if chunksErr != nil && *chunksErr != nil {
+							log.Printf("BytesToSections error: %v", *chunksErr)
+						}
 						return
 					}
 					log.Println("!!!BytesToSections elem:" + string(nameBytes))
