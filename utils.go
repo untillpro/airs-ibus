@@ -213,6 +213,7 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 			switch BusPacketType(chunk[0]) {
 			case BusPacketSectionMap:
 				if currentSection = readSection(ch, SectionKindMap, currentSection); currentSection == nil {
+					log.Println("BytesToSections 1")
 					return
 				}
 				sections <- &sectionDataMap{currentSection}
@@ -220,11 +221,13 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 				nameBytes := []byte{}
 				if currentSection.sectionKind != SectionKindArray {
 					if nameBytes, ok = <-ch; !ok {
+						log.Println("BytesToSections 2")
 						return
 					}
 				}
 				valueBytes, ok := <-ch
 				if !ok {
+					log.Println("BytesToSections 3")
 					return
 				}
 				if currentSection != nil {
@@ -232,11 +235,13 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 				}
 			case BusPacketSectionArray:
 				if currentSection = readSection(ch, SectionKindArray, currentSection); currentSection == nil {
+					log.Println("BytesToSections 4")
 					return
 				}
 				sections <- &sectionDataArray{currentSection}
 			case BusPacketSectionObject:
 				if currentSection = readSection(ch, SectionKindObject, currentSection); currentSection == nil {
+					log.Println("BytesToSections 5")
 					return
 				}
 				sections <- &sectionDataObject{currentSection, false}
