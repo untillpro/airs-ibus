@@ -191,6 +191,7 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 	sections = make(chan ISection)
 	go func() {
 		var currentSection *sectionData
+		counter := 0
 		defer func() {
 			if r := recover(); r != nil {
 				stackTrace := string(debug.Stack())
@@ -201,9 +202,10 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 			}
 			closeSection(currentSection)
 			close(sections)
+			_, ok := <-ch
+			log.Println("BytesToSections counter " + strconv.Itoa(counter) + ", ok:" + strconv.FormatBool(ok))
 		}()
 		ok := false
-		counter := 0
 		for chunk := range ch {
 			if len(chunk) == 0 {
 				continue
@@ -243,7 +245,6 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 			}
 			counter++
 		}
-		log.Println("BytesToSections counter " + strconv.Itoa(counter))
 	}()
 	return
 }
