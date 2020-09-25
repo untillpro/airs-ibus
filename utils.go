@@ -224,6 +224,7 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 						log.Println("BytesToSections 2")
 						return
 					}
+					log.Println("!!!BytesToSections elem:" + string(nameBytes))
 				}
 				valueBytes, ok := <-ch
 				if !ok {
