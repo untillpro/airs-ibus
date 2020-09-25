@@ -176,7 +176,7 @@ func TestPanicOnConvertToISections(t *testing.T) {
 	var chunksErr error
 	go func() {
 		chunks <- []byte{255} // unknown bus packet type
-		chunks <- []byte{0}   // to test read out the channel
+		chunks <- []byte{0}   // to test read out the channel on panic
 		close(chunks)
 	}()
 

@@ -30,9 +30,7 @@ func NewResultSender(chunks chan []byte) IResultSender {
 
 func readSection(ch <-chan []byte, kind SectionKind, prevSection *sectionData) (nextSection *sectionData) {
 	closeSection(prevSection)
-	sectionTypeBytes := []byte{}
-	ok := false
-	sectionTypeBytes, ok = <-ch
+	sectionTypeBytes, ok := <-ch
 	if !ok {
 		return nil
 	}
