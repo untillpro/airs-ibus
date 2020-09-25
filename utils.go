@@ -3,7 +3,9 @@ package ibus
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"runtime/debug"
+	"strconv"
 )
 
 // CreateResponse creates *Response with given status code and string data
@@ -185,6 +187,7 @@ func (rsi *ResultSender) startSection(packetType BusPacketType, sectionType stri
 // Caller should not process chan ISection by >1 goroutine (Elements and Sections will be mixed up)
 // MapSection or ArraySection received -> caller must call Next() until !ok even if elements are not needed
 func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection) {
+	log.Println("BytesToSections start ")
 	sections = make(chan ISection)
 	go func() {
 		var currentSection *sectionData
@@ -200,6 +203,7 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 			close(sections)
 		}()
 		ok := false
+		counter := 0
 		for chunk := range ch {
 			if len(chunk) == 0 {
 				continue
@@ -237,7 +241,9 @@ func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection
 			default:
 				panic("unexpected bus packet type: " + string(chunk[0]))
 			}
+			counter++
 		}
+		log.Println("BytesToSections counter " + strconv.Itoa(counter))
 	}()
 	return
 }
