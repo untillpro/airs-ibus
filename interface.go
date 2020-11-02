@@ -28,3 +28,9 @@ var SendResponse func(ctx context.Context, sender interface{}, response Response
 // Chunks must be closed by sender
 // Non-nil chunksError when chunks are closed means an error in chunks
 var SendParallelResponse func(ctx context.Context, sender interface{}, chunks <-chan []byte, chunksError *error)
+
+// MetricSerialRequestCnt s.e.
+var MetricSerialRequestCnt uint64
+
+// MetricSerialRequestDurNs s.e.
+var MetricSerialRequestDurNs uint64
