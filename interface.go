@@ -30,7 +30,15 @@ var SendResponse func(ctx context.Context, sender interface{}, response Response
 var SendParallelResponse func(ctx context.Context, sender interface{}, chunks <-chan []byte, chunksError *error)
 
 // MetricSerialRequestCnt s.e.
+// @Depecated
 var MetricSerialRequestCnt uint64
 
 // MetricSerialRequestDurNs s.e.
+// @Depecated
 var MetricSerialRequestDurNs uint64
+
+// MetricCntSerialRequest  number of serial requests
+var MetricCntSerialRequest func(ctx context.Context) uint64
+
+// MetricDurSerialRequest duration of serial requests
+var MetricDurSerialRequest func(ctx context.Context) uint64
