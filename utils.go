@@ -30,9 +30,7 @@ func NewResultSender(chunks chan []byte) IResultSender {
 
 func readSection(ch <-chan []byte, kind SectionKind, prevSection *sectionData) (nextSection *sectionData) {
 	closeSection(prevSection)
-	sectionTypeBytes := []byte{}
-	ok := false
-	sectionTypeBytes, ok = <-ch
+	sectionTypeBytes, ok := <-ch
 	if !ok {
 		return nil
 	}
@@ -41,7 +39,7 @@ func readSection(ch <-chan []byte, kind SectionKind, prevSection *sectionData) (
 		return nil
 	}
 	path := []string{}
-	for ok && pathElem[0] != 0 {
+	for ok && (len(pathElem) == 0 || pathElem[0] != 0) {
 		path = append(path, string(pathElem))
 		pathElem, ok = <-ch
 	}
@@ -186,6 +184,7 @@ func (rsi *ResultSender) startSection(packetType BusPacketType, sectionType stri
 // BytesToSections converts chan []byte to chan ISection
 // Caller should not process chan ISection by >1 goroutine (Elements and Sections will be mixed up)
 // MapSection or ArraySection received -> caller must call Next() until !ok even if elements are not needed
+// Nested arrays, maps and objects are not supported. New array, map or object closes previous entity
 func BytesToSections(ch <-chan []byte, chunksErr *error) (sections chan ISection) {
 	sections = make(chan ISection)
 	go func() {

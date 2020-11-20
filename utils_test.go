@@ -176,7 +176,7 @@ func TestPanicOnConvertToISections(t *testing.T) {
 	var chunksErr error
 	go func() {
 		chunks <- []byte{255} // unknown bus packet type
-		chunks <- []byte{0}   // to test read out the channel
+		chunks <- []byte{0}   // to test read out the channel on panic
 		close(chunks)
 	}()
 
@@ -327,6 +327,27 @@ func TestStopOnChannelClose(t *testing.T) {
 	testStopOnChanneClose(t, BusPacketSectionMap)
 	testStopOnChanneClose(t, BusPacketSectionArray)
 	testStopOnChanneClose(t, BusPacketSectionObject)
+}
+
+func TestSendEmptyPathElement(t *testing.T) {
+	chunks := make(chan []byte)
+	rs := NewResultSender(chunks)
+	var chunksErr error
+	go func() {
+		rs.StartMapSection("secMap", []string{"classifier", ""})
+		rs.SendElement("id1", "{}")
+		close(chunks)
+	}()
+
+	sections := BytesToSections(chunks, &chunksErr)
+
+	section := <-sections
+	secMap := section.(IMapSection)
+	require.Equal(t, []string{"classifier", ""}, secMap.Path())
+	name, bytes, ok := secMap.Next()
+	require.True(t, ok)
+	require.Equal(t, "id1", name)
+	require.Equal(t, "\"{}\"", string(bytes))
 }
 
 func testStopOnChanneClose(t *testing.T, bpt BusPacketType) {
