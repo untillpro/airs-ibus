@@ -329,6 +329,27 @@ func TestStopOnChannelClose(t *testing.T) {
 	testStopOnChanneClose(t, BusPacketSectionObject)
 }
 
+func TestSendEmptyPathElement(t *testing.T) {
+	chunks := make(chan []byte)
+	rs := NewResultSender(chunks)
+	var chunksErr error
+	go func() {
+		rs.StartMapSection("secMap", []string{"classifier", ""})
+		rs.SendElement("id1", "{}")
+		close(chunks)
+	}()
+
+	sections := BytesToSections(chunks, &chunksErr)
+
+	section := <-sections
+	secMap := section.(IMapSection)
+	require.Equal(t, []string{"classifier", ""}, secMap.Path())
+	name, bytes, ok := secMap.Next()
+	require.True(t, ok)
+	require.Equal(t, "id1", name)
+	require.Equal(t, "\"{}\"", string(bytes))
+}
+
 func testStopOnChanneClose(t *testing.T, bpt BusPacketType) {
 	var chunksErr error
 	chunks := make(chan []byte)
