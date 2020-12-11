@@ -14,6 +14,7 @@ import (
 // If chunks is not nil chunks must be read to the end
 // Non-nil chunksError when chunks are closed means an error in chunks
 // `err` and `error` can be a wrapped ErrTimeoutExpired (Checked as errors.Is(err, ErrTimeoutExpired))
+// If chunks is not nil then Response must be ignored
 var SendRequest func(ctx context.Context,
 	request *Request, timeout time.Duration) (res *Response, chunks <-chan []byte, chunksError *error, err error)
 
@@ -24,10 +25,16 @@ var RequestHandler func(ctx context.Context, sender interface{}, request Request
 var SendResponse func(ctx context.Context, sender interface{}, response Response)
 
 // SendParallelResponse s.e.
+// @Deprecated
 // If chunks is not nil they must be readed by implementation to the end
 // Chunks must be closed by sender
-// Non-nil chunksError when chunks are closed means an error in chunks
-var SendParallelResponse func(ctx context.Context, sender interface{}, chunks <-chan []byte, chunksError *error)
+// response is valid when chunks finishes or nil
+// chunkError is set by implementation when it could not send chunk
+var SendParallelResponse func(ctx context.Context, sender interface{}, chunks <-chan []byte, chunkError *error, response *Response)
+
+// SendParallelResponse2 ???
+// Result of Close
+var SendParallelResponse2 func(ctx context.Context, sender interface{}) (rsender IResultSenderClosable)
 
 // MetricSerialRequestCnt s.e.
 // @Depecated

@@ -122,3 +122,10 @@ type IResultSender interface {
 	// if element is []byte then it will be sent sent as is. Note: JSON malformation is possible for airs-router's http client. Caller must take care of this.
 	SendElement(name string, element interface{}) (err error)
 }
+
+// IResultSenderClosable s.e.
+type IResultSenderClosable interface {
+	IResultSender()
+	// Close() must be the last call to the interface
+	Close(err error)
+}
