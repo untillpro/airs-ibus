@@ -119,6 +119,6 @@ type IResultSender interface {
 	// Send* can be called multiple times per array
 	// name is ignored for Array section
 	// For reading journal
-	// if element is []byte then it will be sent sent as is. Note: JSON malformation is possible for airs-router's http client. Caller must take care of this.
+	// if element is []byte then it will be sent sent as is. Note: JSON malformation is possible for airs-router's http client. Sender must take care of this.
 	SendElement(name string, element interface{}) (err error)
 }
