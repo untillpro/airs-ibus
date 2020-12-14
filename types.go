@@ -125,7 +125,7 @@ type IResultSender interface {
 
 // IResultSenderClosable s.e.
 type IResultSenderClosable interface {
-	IResultSender()
+	IResultSender
 	// Close() must be the last call to the interface
 	Close(err error)
 }
