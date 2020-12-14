@@ -90,16 +90,16 @@ type IObjectSection interface {
 }
 
 // IArraySection s.e.
-// Caller MUST call Next() until !ok
 type IArraySection interface {
 	IDataSection
+	// Caller MUST call Next() until !ok
 	Next() (value []byte, ok bool)
 }
 
 // IMapSection s.e.
-// Caller MUST call Next() until !ok
 type IMapSection interface {
 	IDataSection
+	// Caller MUST call Next() until !ok
 	Next() (name string, value []byte, ok bool)
 }
 
