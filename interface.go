@@ -30,7 +30,7 @@ var SendResponse func(ctx context.Context, sender interface{}, response Response
 // Chunks must be closed by sender
 // response is valid when chunks finishes or nil
 // chunkError is set by implementation when it could not send chunk
-var SendParallelResponse func(ctx context.Context, sender interface{}, chunks <-chan []byte, chunkError *error, response *Response)
+var SendParallelResponse func(ctx context.Context, sender interface{}, chunks <-chan []byte, chunkError *error)
 
 // SendParallelResponse2 ???
 // Result of Close
