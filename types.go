@@ -42,21 +42,22 @@ type Response struct {
 	Data        []byte
 }
 
-// BusPacketType s.e.
-type BusPacketType int
-
 // SectionKind int
 type SectionKind int
 
 const (
+	// BusPacketResponse s.e.
+	BusPacketResponse byte = iota
+	// BusPacketClose s.e.
+	BusPacketClose
 	// BusPacketSectionMap s.e.
-	BusPacketSectionMap BusPacketType = iota
-	// BusPacketElement s.e.
-	BusPacketElement
+	BusPacketSectionMap
 	// BusPacketSectionArray s.e.
 	BusPacketSectionArray
 	// BusPacketSectionObject s.e.
 	BusPacketSectionObject
+	// BusPacketSectionElement s.e.
+	BusPacketSectionElement
 )
 
 const (
