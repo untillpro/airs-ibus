@@ -19,20 +19,20 @@ type Request struct {
 	// Calculated from PartitionDividend, 0 for non-party queues
 	PartitionNumber int
 
-	Header map[string][]string
+	Header map[string][]string `json:",omitempty"`
 
 	// Part of URL which follows: queue alias in non-party queues, part dividend in partitioned queues
 	Resource string
 
 	// Part of URL which follows ? (URL.Query())
-	Query map[string][]string
+	Query map[string][]string `json:",omitempty"`
 
 	// Content of http.Request JSON-parsed Body
-	Body []byte
+	Body []byte `json:",omitempty"`
 
 	// attachment-name => attachment-id
 	// Must be non-null
-	Attachments map[string]string
+	Attachments map[string]string `,json:"omitempty"`
 }
 
 // Response s.e.
@@ -42,22 +42,9 @@ type Response struct {
 	Data        []byte
 }
 
-// BusPacketType s.e.
-type BusPacketType int
-
 // SectionKind int
 type SectionKind int
 
-const (
-	// BusPacketSectionMap s.e.
-	BusPacketSectionMap BusPacketType = iota
-	// BusPacketElement s.e.
-	BusPacketElement
-	// BusPacketSectionArray s.e.
-	BusPacketSectionArray
-	// BusPacketSectionObject s.e.
-	BusPacketSectionObject
-)
 
 const (
 	// SectionKindUnspecified s.e.
