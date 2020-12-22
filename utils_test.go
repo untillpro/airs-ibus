@@ -22,5 +22,5 @@ func TestCreateErrorResponse(t *testing.T) {
 	r := CreateErrorResponse(1, errors.New("test"))
 	require.Equal(t, 1, r.StatusCode)
 	require.Equal(t, "test", string(r.Data))
-	require.Equal(t, "plain/text", r.ContentType)
+	require.Equal(t, "text/plain", r.ContentType)
 }
