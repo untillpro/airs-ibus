@@ -12,11 +12,11 @@ func CreateResponse(code int, message string) Response {
 	}
 }
 
-// CreateErrorResponse creates *Response with given status code, error message and ContentType "plain/text"
+// CreateErrorResponse creates *Response with given status code, error message and ContentType "text/plain"
 func CreateErrorResponse(code int, err error) Response {
 	return Response{
 		StatusCode:  code,
 		Data:        []byte(err.Error()),
-		ContentType: "plain/text",
+		ContentType: "text/plain",
 	}
 }
