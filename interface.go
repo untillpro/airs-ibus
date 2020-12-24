@@ -21,6 +21,7 @@ var SendRequest func(ctx context.Context,
 
 // SendRequest2 used by router and app, sends a message to a given queue
 // err is not nil -> NATS-related error occured before or during reading the first response packet. Sections and secError are nil, res must be ignored
+// timeout means timeout during reading Response or ISection
 // sections not nil ->
 //  - res must be ignored
 //  - sections must be read to the end
