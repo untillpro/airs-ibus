@@ -26,6 +26,7 @@ var SendRequest func(ctx context.Context,
 //  - res must be ignored
 //  - sections must be read to the end
 //  - non-nil secError when sections are closed means NATS-related error during reading sections or an error came with IResultSenderCloseable.Close()
+//  - `ctx.Done()` -> implementation will close `sections`. Also `I*Section.Next()` will return false
 // sections is nil -> res and err only should be used as the result. secError is nil
 // `err` and `*secError` can be a wrapped ErrTimeoutExpired (Checked as errors.Is(err, ErrTimeoutExpired))
 var SendRequest2 func(ctx context.Context,
