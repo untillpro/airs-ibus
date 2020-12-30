@@ -32,7 +32,7 @@ type Request struct {
 
 	// attachment-name => attachment-id
 	// Must be non-null
-	Attachments map[string]string `,json:"omitempty"`
+	Attachments map[string]string `json:",omitempty"`
 }
 
 // Response s.e.
