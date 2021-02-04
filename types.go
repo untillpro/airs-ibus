@@ -16,7 +16,7 @@ type Request struct {
 
 	// Always 0 for non-party queues
 	WSID int64
-	// Calculated from PartitionDividend, 0 for non-party queues
+	// Calculated by bus using WSID and queue parameters
 	PartitionNumber int
 
 	Header map[string][]string `json:",omitempty"`
@@ -44,7 +44,6 @@ type Response struct {
 
 // SectionKind int
 type SectionKind int
-
 
 const (
 	// SectionKindUnspecified s.e.
