@@ -90,6 +90,7 @@ type IMapSection interface {
 }
 
 // IResultSender used by ParallelFunction
+// If error happens in any Send* method all subsequent calls also return error
 type IResultSender interface {
 	// Must be called before first Send*
 	// Can be called multiple times - each time new section started
