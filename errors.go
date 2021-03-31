@@ -7,4 +7,4 @@ package ibus
 import "errors"
 
 // ErrTimeoutExpired s.e.
-var ErrTimeoutExpired = errors.New("Timeout expired")
+var ErrTimeoutExpired = errors.New("timeout expired")
