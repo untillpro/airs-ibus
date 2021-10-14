@@ -63,3 +63,9 @@ var MetricCntSerialRequest func(ctx context.Context) uint64
 
 // MetricDurSerialRequest duration of serial requests
 var MetricDurSerialRequest func(ctx context.Context) uint64
+
+// Provider must take RequestHandler as a parameter
+type IBus interface {
+	SendRequest2(ctx context.Context, request Request, timeout time.Duration) (res Response, sections <-chan ISection, secError *error, err error)
+	SendParallelResponse2(ctx context.Context, sender interface{}) (rsender IResultSenderClosable)
+}
