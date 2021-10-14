@@ -64,8 +64,23 @@ var MetricCntSerialRequest func(ctx context.Context) uint64
 // MetricDurSerialRequest duration of serial requests
 var MetricDurSerialRequest func(ctx context.Context) uint64
 
-// Provider must take RequestHandler as a parameter
+/*
+	Provider must take RequestHandler as a parameter
+
+	SendRequest2 creates a temp struct which is passed to RequestHandler as a `sender`
+	RequestHandler calls either SendResponse or SendParallelResponse2 using sender
+	SendRequest2 should read answer using sender structure
+
+	Simple SendRequest2 implementation
+		- Create channel
+		- Run goroutine which calls RequestHandler
+		- Read from channel
+		- Detect answer type - SendResponse or SendParallelResponse2
+		- Return either Response or channel
+
+*/
 type IBus interface {
 	SendRequest2(ctx context.Context, request Request, timeout time.Duration) (res Response, sections <-chan ISection, secError *error, err error)
+	SendResponse(ctx context.Context, sender interface{}, response Response)
 	SendParallelResponse2(ctx context.Context, sender interface{}) (rsender IResultSenderClosable)
 }
