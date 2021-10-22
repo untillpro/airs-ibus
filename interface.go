@@ -80,7 +80,28 @@ var MetricDurSerialRequest func(ctx context.Context) uint64
 
 */
 type IBus interface {
+	// SendRequest is called by sender side
+	// err != nil -> nothing made, everything is nil
+	// sections nil
+	// - secError is nil
+	// - res only should be used
+	// sections not nil
+	// - res should not be used
+	// - sections chan should be read out
+	// - *secError should not be touched until sections emptied
+	// - *secError must be checked for error right after sections emptied
+	// behaviour on ctx.Done:
+	// - caller of SendRequest2() should not check ctx.Done() on sections read. Sections chan will be closed by bus on IResultSenderClosable.Close()
+	// - successful section element send and ctx.Done() happened simulateously -> SendElement() should return ctx.Err()
+	// neither SendResponse nor SendParallelResponse2 called during timeout -> err is ibus.ErrTimeout
 	SendRequest2(ctx context.Context, request Request, timeout time.Duration) (res Response, sections <-chan ISection, secError *error, err error)
+
+	// SendResponse is called by service side to respond with a signle response.
+	// SendResponse is called again or SendParallelResponse2 is called after -> panic
 	SendResponse(ctx context.Context, sender interface{}, response Response)
+
+	// SendParallelResponse2 is called by service side to respond with a sections response
+	// SendParallelResponse2 is called again or SendResponse is called after -> panic
+	// IResultSenderClosable.Close() must be called at the end
 	SendParallelResponse2(ctx context.Context, sender interface{}) (rsender IResultSenderClosable)
 }
