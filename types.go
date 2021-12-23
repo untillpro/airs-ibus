@@ -33,6 +33,9 @@ type Request struct {
 	// attachment-name => attachment-id
 	// Must be non-null
 	Attachments map[string]string `json:",omitempty"`
+
+	// need for airs-bp3 to know where WorkspaceBuilder projection will send init-requests
+	RequestHost string
 }
 
 // Response s.e.
