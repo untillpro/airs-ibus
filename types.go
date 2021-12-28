@@ -35,9 +35,8 @@ type Request struct {
 	Attachments map[string]string `json:",omitempty"`
 
 	// airs-bp3
-	// RequestHost need to know where WorkspaceBuilder projection will send init-requests
-	RequestHost string
-	AppName     string
+	// AppQName need to determine where to send c.sys.Init requests on creating a new workspace
+	AppQName string
 }
 
 // Response s.e.
