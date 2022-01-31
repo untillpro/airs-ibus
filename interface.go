@@ -98,10 +98,10 @@ type IBus interface {
 
 	// SendResponse is called by service side to respond with a signle response.
 	// SendResponse is called again or SendParallelResponse2 is called after -> panic
-	SendResponse(ctx context.Context, sender interface{}, response Response)
+	SendResponse(sender interface{}, response Response)
 
 	// SendParallelResponse2 is called by service side to respond with a sections response
 	// SendParallelResponse2 is called again or SendResponse is called after -> panic
 	// IResultSenderClosable.Close() must be called at the end
-	SendParallelResponse2(ctx context.Context, sender interface{}) (rsender IResultSenderClosable)
+	SendParallelResponse2(sender interface{}) (rsender IResultSenderClosable)
 }
