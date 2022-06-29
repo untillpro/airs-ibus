@@ -37,6 +37,8 @@ type Request struct {
 	// airs-bp3
 	// AppQName need to determine where to send c.sys.Init requests on creating a new workspace
 	AppQName string
+
+	Host string
 }
 
 // Response s.e.
