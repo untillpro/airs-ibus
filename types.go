@@ -4,6 +4,8 @@
 
 package ibus
 
+import "context"
+
 // HTTPMethod s.e.
 // see const.go/HTTPMethodGET...
 type HTTPMethod int
@@ -78,21 +80,21 @@ type IObjectSection interface {
 	IDataSection
 	// Caller MUST call Value() even if it does not need the value
 	// note: second and further Value() calls will return nil
-	Value() []byte
+	Value(ctx context.Context) []byte
 }
 
 // IArraySection s.e.
 type IArraySection interface {
 	IDataSection
 	// Caller MUST call Next() until !ok
-	Next() (value []byte, ok bool)
+	Next(ctx context.Context) (value []byte, ok bool)
 }
 
 // IMapSection s.e.
 type IMapSection interface {
 	IDataSection
 	// Caller MUST call Next() until !ok
-	Next() (name string, value []byte, ok bool)
+	Next(ctx context.Context) (name string, value []byte, ok bool)
 }
 
 // IResultSender used by ParallelFunction
