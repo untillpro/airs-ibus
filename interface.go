@@ -20,7 +20,7 @@ var SendRequest func(ctx context.Context,
 	request *Request, timeout time.Duration) (res *Response, chunks <-chan []byte, chunksError *error, err error)
 
 // SendRequest2 used by router and app, sends a message to a given queue
-// err is not nil -> NATS-related error occured before or during reading the first response packet. Sections and secError are nil, res must be ignored
+// err is not nil -> NATS-related error occurred before or during reading the first response packet. Sections and secError are nil, res must be ignored
 // timeout means timeout during reading Response or ISection
 // sections not nil ->
 //  - res must be ignored
@@ -50,11 +50,11 @@ var SendParallelResponse func(ctx context.Context, sender interface{}, chunks <-
 // Result of Close
 var SendParallelResponse2 func(ctx context.Context, sender interface{}) (rsender IResultSenderClosable)
 
-// Depecated: use MetricCntSerialRequest
+// Deprecated: use MetricCntSerialRequest
 // MetricSerialRequestCnt s.e.
 var MetricSerialRequestCnt uint64
 
-// DepecatedL use MetricDurSerialRequest
+// Deprecated: use MetricDurSerialRequest
 // MetricSerialRequestDurNs s.e.
 var MetricSerialRequestDurNs uint64
 

@@ -14,6 +14,8 @@ func CreateResponse(code int, message string) Response {
 
 // CreateErrorResponse creates *Response with given status code, error message and ContentType "text/plain"
 func CreateErrorResponse(code int, err error) Response {
+	x := MetricSerialRequestCnt
+	_ = x
 	return Response{
 		StatusCode:  code,
 		Data:        []byte(err.Error()),
