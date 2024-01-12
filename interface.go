@@ -23,10 +23,11 @@ var SendRequest func(ctx context.Context,
 // err is not nil -> NATS-related error occurred before or during reading the first response packet. Sections and secError are nil, res must be ignored
 // timeout means timeout during reading Response or ISection
 // sections not nil ->
-//  - res must be ignored
-//  - sections must be read to the end
-//  - non-nil secError when sections are closed means NATS-related error during reading sections or an error came with IResultSenderCloseable.Close()
-//  - `ctx.Done()` -> implementation will close `sections`. Also `I*Section.Next()` will return false
+//   - res must be ignored
+//   - sections must be read to the end
+//   - non-nil secError when sections are closed means NATS-related error during reading sections or an error came with IResultSenderCloseable.Close()
+//   - `ctx.Done()` -> implementation will close `sections`. Also `I*Section.Next()` will return false
+//
 // sections is nil -> res and err only should be used as the result. secError is nil
 // `err` and `*secError` can be a wrapped ErrTimeoutExpired (Checked as errors.Is(err, ErrTimeoutExpired))
 var SendRequest2 func(ctx context.Context,
@@ -65,19 +66,18 @@ var MetricCntSerialRequest func(ctx context.Context) uint64
 var MetricDurSerialRequest func(ctx context.Context) uint64
 
 /*
-	Provider must take RequestHandler as a parameter
+Provider must take RequestHandler as a parameter
 
-	SendRequest2 creates a temp struct which is passed to RequestHandler as a `sender`
-	RequestHandler calls either SendResponse or SendParallelResponse2 using sender
-	SendRequest2 should read answer using sender structure
+SendRequest2 creates a temp struct which is passed to RequestHandler as a `sender`
+RequestHandler calls either SendResponse or SendParallelResponse2 using sender
+SendRequest2 should read answer using sender structure
 
-	Simple SendRequest2 implementation
-		- Create channel
-		- Run goroutine which calls RequestHandler
-		- Read from channel
-		- Detect answer type - SendResponse or SendParallelResponse2
-		- Return either Response or channel
-
+Simple SendRequest2 implementation
+  - Create channel
+  - Run goroutine which calls RequestHandler
+  - Read from channel
+  - Detect answer type - SendResponse or SendParallelResponse2
+  - Return either Response or channel
 */
 type IBus interface {
 	// SendRequest is called by sender side
